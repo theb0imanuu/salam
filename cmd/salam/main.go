@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/theb0imanuu/salam/internal/config"
 	"github.com/theb0imanuu/salam/internal/monitor"
+	"github.com/theb0imanuu/salam/internal/tui"
 )
 
 var (
@@ -111,9 +112,9 @@ func runWatch(cmd *cobra.Command, args []string) error {
 }
 
 func runDashboard(cmd *cobra.Command, args []string) error {
-	fmt.Println("Dashboard mode - coming in v2.0!")
-	fmt.Println("For now, use: salam watch")
-	return nil
+	cfg := config.Load(cfgFile)
+	m := monitor.New(monitor.Options{Config: cfg})
+	return tui.StartDashboard(m)
 }
 
 func runConfig(cmd *cobra.Command, args []string) error {

@@ -13,6 +13,7 @@
 ## Features
 
 - ⚡ **Fast**: Compiled Go binary, no runtime dependencies
+- 📊 **Interactive Dashboard**: Real-time TUI dashboard with live updates
 - 🎯 **Precise**: Detailed CPU, memory, disk, and network metrics
 - 🔔 **Alerts**: Configurable thresholds with webhook support
 - 📊 **Multiple Formats**: Pretty console output or JSON
@@ -88,6 +89,12 @@ go install github.com/theb0imanuu/salam/cmd/salam@latest
 Download the latest binary from [releases](https://github.com/theb0imanuu/salam/releases).
 
 ## Usage
+
+### Interactive Dashboard (v2.0 preview)
+
+```bash
+salam dashboard
+```
 
 ### Quick Check
 

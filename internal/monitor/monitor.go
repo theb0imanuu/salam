@@ -46,7 +46,7 @@ func (m *Monitor) RunOnce() error {
 	spinner := reporter.NewSpinner("Collecting system health data...")
 	spinner.Start()
 
-	data, err := m.collect()
+	data, err := m.Collect()
 	spinner.Stop()
 
 	if err != nil {
@@ -95,7 +95,7 @@ func (m *Monitor) StartWatching() error {
 	return nil
 }
 
-func (m *Monitor) collect() (*models.HealthData, error) {
+func (m *Monitor) Collect() (*models.HealthData, error) {
 	hostname, _ := os.Hostname()
 
 	data := &models.HealthData{
