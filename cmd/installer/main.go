@@ -1,39 +1,43 @@
 package main
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
+
+//go:embed salam.exe
+var winBinary []byte
+
+//go:embed salam
+var unixBinary []byte
 
 func main() {
 	fmt.Println("🕊️  Salam Installer")
 	fmt.Println("==================")
 
 	binaryName := "salam"
+	var binaryData []byte
+
 	if runtime.GOOS == "windows" {
 		binaryName += ".exe"
+		binaryData = winBinary
+	} else {
+		binaryData = unixBinary
 	}
 
-	// 1. Find the binary to install
-	// We expect the 'salam' binary to be in the same folder as the installer
-	sourcePath, _ := os.Executable()
-	sourceDir := filepath.Dir(sourcePath)
-	sourceBinary := filepath.Join(sourceDir, binaryName)
-
-	if _, err := os.Stat(sourceBinary); os.IsNotExist(err) {
-		// Fallback: search in build directory
-		sourceBinary = filepath.Join(sourceDir, "build", binaryName)
-		if _, err := os.Stat(sourceBinary); os.IsNotExist(err) {
-			fmt.Printf("❌ Could not find %s to install.\n", binaryName)
-			fmt.Println("Please make sure the binary is in the same directory as the installer.")
-			os.Exit(1)
-		}
+	if len(binaryData) == 0 {
+		fmt.Printf("❌ Error: Embedded binary for %s is empty.\n", runtime.GOOS)
+		fmt.Println("This installer was built incorrectly.")
+		pause()
+		os.Exit(1)
 	}
 
-	// 2. Determine installation directory
+	// 1. Determine installation directory
 	var installDir string
 	if runtime.GOOS == "windows" {
 		home, _ := os.UserHomeDir()
@@ -42,43 +46,28 @@ func main() {
 		installDir = "/usr/local/bin"
 	}
 
-	// 3. Create directory
+	// 2. Create directory
 	if err := os.MkdirAll(installDir, 0755); err != nil {
 		fmt.Printf("❌ Failed to create installation directory: %v\n", err)
+		pause()
 		os.Exit(1)
 	}
 
-	// 4. Copy binary
+	// 3. Write binary
 	targetPath := filepath.Join(installDir, binaryName)
-	input, err := os.ReadFile(sourceBinary)
-	if err != nil {
-		fmt.Printf("❌ Failed to read source binary: %v\n", err)
+	if err := os.WriteFile(targetPath, binaryData, 0755); err != nil {
+		if runtime.GOOS != "windows" && os.IsPermission(err) {
+			fmt.Println("🔐 Permission denied. Please run with sudo or check permissions.")
+		}
+		fmt.Printf("❌ Failed to write binary to %s: %v\n", targetPath, err)
+		pause()
 		os.Exit(1)
 	}
 
-	if err := os.WriteFile(targetPath, input, 0755); err != nil {
-		if runtime.GOOS != "windows" && os.IsPermission(err) {
-			fmt.Println("🔐 Permission denied. Retrying with sudo...")
-			cmd := exec.Command("sudo", "cp", sourceBinary, targetPath)
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			if err := cmd.Run(); err != nil {
-				fmt.Printf("❌ Failed to install with sudo: %v\n", err)
-				os.Exit(1)
-			}
-		} else {
-			fmt.Printf("❌ Failed to write binary to %s: %v\n", targetPath, err)
-			os.Exit(1)
-		}
-	}
-
-	// 5. Windows specific: Update PATH
+	// 4. Windows specific: Update PATH
 	if runtime.GOOS == "windows" {
 		fmt.Println("📝 Adding Salam to your PATH...")
-		// Use powershell to update user path persistently
-		psCmd := fmt.Sprintf("[Environment]::SetEnvironmentVariable('Path', [Environment]::GetEnvironmentVariable('Path', 'User') + ';%s', 'User')", installDir)
-		cmd := exec.Command("powershell", "-Command", psCmd)
-		if err := cmd.Run(); err != nil {
+		if err := updateWindowsPath(installDir); err != nil {
 			fmt.Printf("⚠️  Failed to update PATH automatically: %v\n", err)
 			fmt.Printf("Please add %s to your PATH manually.\n", installDir)
 		} else {
@@ -88,5 +77,48 @@ func main() {
 
 	fmt.Println("\n🎉 Installation successful!")
 	fmt.Printf("Salam has been installed to: %s\n", targetPath)
-	fmt.Println("\nPlease restart your terminal and type 'salam' to get started!")
+
+	if runtime.GOOS == "windows" {
+		fmt.Println("\nIMPORTANT: Please close this terminal and open a NEW one for the changes to take effect.")
+		fmt.Println("Then just type 'salam' to get started!")
+	} else {
+		fmt.Println("\nType 'salam' to get started!")
+	}
+
+	pause()
+}
+
+func updateWindowsPath(newPath string) error {
+	// 1. Get current path
+	getCmd := exec.Command("powershell", "-Command", "[Environment]::GetEnvironmentVariable('Path', 'User')")
+	out, err := getCmd.Output()
+	if err != nil {
+		return err
+	}
+	currentPath := strings.TrimSpace(string(out))
+
+	// 2. Check if already exists
+	paths := strings.Split(currentPath, ";")
+	for _, p := range paths {
+		if strings.EqualFold(p, newPath) {
+			return nil // Already in PATH
+		}
+	}
+
+	// 3. Append and set
+	updatedPath := currentPath
+	if updatedPath != "" && !strings.HasSuffix(updatedPath, ";") {
+		updatedPath += ";"
+	}
+	updatedPath += newPath
+
+	setCmd := exec.Command("powershell", "-Command", fmt.Sprintf("[Environment]::SetEnvironmentVariable('Path', '%s', 'User')", updatedPath))
+	return setCmd.Run()
+}
+
+func pause() {
+	if runtime.GOOS == "windows" {
+		fmt.Println("\nPress Enter to exit...")
+		fmt.Scanln()
+	}
 }
