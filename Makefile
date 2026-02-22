@@ -9,6 +9,7 @@ all: build
 build:
 	@mkdir -p $(BUILD_DIR)
 	go build -ldflags="-s -w -X main.version=$(VERSION)" -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/salam
+	go build -ldflags="-s -w" -o $(BUILD_DIR)/salam-install ./cmd/installer
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -27,6 +28,7 @@ release:
 	GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 ./cmd/salam
 	GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 ./cmd/salam
 	GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe ./cmd/salam
+	GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o $(BUILD_DIR)/salam-setup-windows-amd64.exe ./cmd/installer
 
 package: release
 	cd $(BUILD_DIR) && tar -czf $(BINARY_NAME)-$(VERSION)-darwin-amd64.tar.gz $(BINARY_NAME)-darwin-amd64

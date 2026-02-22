@@ -36,6 +36,24 @@ var (
 
 	metricValueStyle = lipgloss.NewStyle().
 				Bold(true)
+
+	// Command Bar Styles
+	commandBarStyle = lipgloss.NewStyle().
+			Foreground(highlight).
+			Padding(0, 1)
+
+	inputStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("15"))
+
+	messageStyle = lipgloss.NewStyle().
+			Foreground(success).
+			Italic(true).
+			Padding(0, 1)
+
+	errorStyle = lipgloss.NewStyle().
+			Foreground(danger).
+			Bold(true).
+			Padding(0, 1)
 )
 
 func renderProgressBar(width int, percentage float64) string {

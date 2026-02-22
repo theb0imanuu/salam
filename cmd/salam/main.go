@@ -16,6 +16,7 @@ var (
 )
 
 func main() {
+	cobra.MousetrapHelpText = ""
 	rootCmd := &cobra.Command{
 		Use:   "salam",
 		Short: "A comprehensive server health monitoring CLI",
@@ -26,7 +27,7 @@ func main() {
 ╚══════════════════════════════════════════╝`,
 		Version: version,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runCheck(cmd, args)
+			return runDashboard(cmd, args)
 		},
 	}
 

@@ -72,11 +72,14 @@
 
 ## Installation
 
-### Via Install Script
+### Via Installer (Recommended)
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/theb0imanuu/salam/main/install.sh | bash
-```
+Download the latest binary for your OS from [releases](https://github.com/theb0imanuu/salam/releases).
+
+1. **Windows**: Run `salam-setup-windows-amd64.exe`. It will install Salam and add it to your PATH automatically.
+2. **Unix**: Run the `salam-install` binary.
+
+### Via Install Script (Unix only)
 
 ### Via Go
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/theb0imanuu/salam/internal/models"
@@ -16,11 +17,14 @@ import (
 type tickMsg time.Time
 
 type keyMap struct {
-	Up     key.Binding
-	Down   key.Binding
-	Quit   key.Binding
-	Help   key.Binding
-	Reload key.Binding
+	Up      key.Binding
+	Down    key.Binding
+	Quit    key.Binding
+	Help    key.Binding
+	Reload  key.Binding
+	Enter   key.Binding
+	Command key.Binding
+	Esc     key.Binding
 }
 
 var keys = keyMap{
@@ -44,6 +48,18 @@ var keys = keyMap{
 		key.WithKeys("r"),
 		key.WithHelp("r", "reload"),
 	),
+	Enter: key.NewBinding(
+		key.WithKeys("enter"),
+		key.WithHelp("enter", "submit"),
+	),
+	Command: key.NewBinding(
+		key.WithKeys(":"),
+		key.WithHelp(":", "command"),
+	),
+	Esc: key.NewBinding(
+		key.WithKeys("esc"),
+		key.WithHelp("esc", "cancel"),
+	),
 }
 
 func (k keyMap) ShortHelp() []key.Binding {
@@ -57,6 +73,13 @@ func (k keyMap) FullHelp() [][]key.Binding {
 	}
 }
 
+type Mode int
+
+const (
+	NavMode Mode = iota
+	CommandMode
+)
+
 type Model struct {
 	Stats    *models.HealthData
 	Monitor  *monitor.Monitor
@@ -64,13 +87,25 @@ type Model struct {
 	Err      error
 	Help     help.Model
 	KeyMap   keyMap
+	Input    textinput.Model
+	Mode     Mode
+	Message  string
+	IsError  bool
 }
 
 func NewModel(m *monitor.Monitor) Model {
+	ti := textinput.New()
+	ti.Placeholder = "Enter command..."
+	ti.Prompt = ": "
+	ti.CharLimit = 64
+	ti.Width = 40
+
 	return Model{
 		Monitor: m,
 		Help:    help.New(),
 		KeyMap:  keys,
+		Input:   ti,
+		Mode:    NavMode,
 	}
 }
 
@@ -85,6 +120,29 @@ func (m Model) tick() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
+	if m.Mode == CommandMode {
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch {
+			case key.Matches(msg, m.KeyMap.Esc):
+				m.Mode = NavMode
+				m.Input.Blur()
+				m.Input.Reset()
+				return m, nil
+			case key.Matches(msg, m.KeyMap.Enter):
+				m.handleCommand(m.Input.Value())
+				m.Mode = NavMode
+				m.Input.Blur()
+				m.Input.Reset()
+				return m, nil
+			}
+		}
+		m.Input, cmd = m.Input.Update(msg)
+		return m, cmd
+	}
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
@@ -92,6 +150,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case key.Matches(msg, m.KeyMap.Reload):
 			m.fetchStats()
+			return m, nil
+		case key.Matches(msg, m.KeyMap.Command):
+			m.Mode = CommandMode
+			m.Input.Focus()
 			return m, nil
 		}
 
@@ -105,6 +167,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func (m *Model) handleCommand(cmd string) {
+	m.IsError = false
+	m.Message = ""
+
+	parts := strings.Fields(cmd)
+	if len(parts) == 0 {
+		return
+	}
+
+	switch parts[0] {
+	case "check":
+		m.fetchStats()
+		m.Message = "Forced refresh complete"
+	case "quit", "exit":
+		tea.Quit()
+	case "help":
+		m.Message = "Commands: check, quit, help"
+	default:
+		m.IsError = true
+		m.Message = fmt.Sprintf("Unknown command: %s", parts[0])
+	}
 }
 
 func (m *Model) fetchStats() {
@@ -158,12 +243,24 @@ func (m Model) View() string {
 	info := metricLabelStyle.Render(fmt.Sprintf("\nLast update: %s", m.LastTick.Format("15:04:05")))
 	helpView := "\n\n" + m.Help.View(m.KeyMap)
 
+	var bottomBar string
+	if m.Mode == CommandMode {
+		bottomBar = "\n" + m.Input.View()
+	} else if m.Message != "" {
+		style := messageStyle
+		if m.IsError {
+			style = errorStyle
+		}
+		bottomBar = "\n" + style.Render(m.Message)
+	}
+
 	return mainStyle.Render(
 		lipgloss.JoinVertical(lipgloss.Left,
 			header,
 			topRow,
 			bottomRow,
 			info,
+			bottomBar,
 			helpView,
 		),
 	)
