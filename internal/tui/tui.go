@@ -53,7 +53,7 @@ var keys = keyMap{
 		key.WithHelp("enter", "submit"),
 	),
 	Command: key.NewBinding(
-		key.WithKeys(":"),
+		key.WithKeys(":", "/"),
 		key.WithHelp(":", "command"),
 	),
 	Esc: key.NewBinding(
@@ -110,7 +110,11 @@ func NewModel(m *monitor.Monitor) Model {
 }
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(tea.EnterAltScreen, m.tick())
+	return tea.Batch(
+		tea.EnterAltScreen,
+		m.tick(),
+		textinput.Blink,
+	)
 }
 
 func (m Model) tick() tea.Cmd {
@@ -132,11 +136,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.Input.Reset()
 				return m, nil
 			case key.Matches(msg, m.KeyMap.Enter):
-				m.handleCommand(m.Input.Value())
+				cmd = m.handleCommand(m.Input.Value())
 				m.Mode = NavMode
 				m.Input.Blur()
 				m.Input.Reset()
-				return m, nil
+				return m, cmd
 			}
 		}
 		m.Input, cmd = m.Input.Update(msg)
@@ -145,6 +149,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		m.Message = "" // Clear feedback message on any key
 		switch {
 		case key.Matches(msg, m.KeyMap.Quit):
 			return m, tea.Quit
@@ -154,7 +159,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.KeyMap.Command):
 			m.Mode = CommandMode
 			m.Input.Focus()
-			return m, nil
+			return m, m.Input.Focus()
 		}
 
 	case tickMsg:
@@ -169,26 +174,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *Model) handleCommand(cmd string) {
+func (m *Model) handleCommand(cmd string) tea.Cmd {
 	m.IsError = false
 	m.Message = ""
 
 	parts := strings.Fields(cmd)
 	if len(parts) == 0 {
-		return
+		return nil
 	}
 
 	switch parts[0] {
 	case "check":
 		m.fetchStats()
 		m.Message = "Forced refresh complete"
+		return nil
 	case "quit", "exit":
-		tea.Quit()
+		return tea.Quit
 	case "help":
 		m.Message = "Commands: check, quit, help"
+		return nil
 	default:
 		m.IsError = true
 		m.Message = fmt.Sprintf("Unknown command: %s", parts[0])
+		return nil
 	}
 }
 
