@@ -24,6 +24,9 @@ func main() {
 ║   Peace of mind for your infrastructure  ║
 ╚══════════════════════════════════════════╝`,
 		Version: version,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runCheck(cmd, args)
+		},
 	}
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.salam.yaml)")
@@ -40,6 +43,9 @@ func main() {
 	checkCmd.Flags().Bool("network", false, "Check network only")
 	checkCmd.Flags().Bool("json", false, "Output as JSON")
 	checkCmd.Flags().String("webhook", "", "Send results to webhook URL")
+
+	// Add flags to rootCmd as well to support default execution
+	rootCmd.Flags().AddFlagSet(checkCmd.Flags())
 
 	// Watch command
 	watchCmd := &cobra.Command{
