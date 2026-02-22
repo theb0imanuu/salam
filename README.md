@@ -1,6 +1,6 @@
 # 🕊️ Salam
 
-[![Go Version](https://img.shields.io/github/go-mod/go-v/theb0imanuu/salam)](https://github.com/theb0imanuu/salam)
+[![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go&logoColor=white)](https://github.com/theb0imanuu/salam/blob/main/go.mod)
 [![Go Report Card](https://goreportcard.com/badge/github.com/theb0imanuu/salam)](https://goreportcard.com/report/github.com/theb0imanuu/salam)
 [![License](https://img.shields.io/github/license/theb0imanuu/salam)](https://github.com/theb0imanuu/salam/blob/main/LICENSE)
 [![Repo Size](https://img.shields.io/github/repo-size/theb0imanuu/salam)](https://github.com/theb0imanuu/salam)
